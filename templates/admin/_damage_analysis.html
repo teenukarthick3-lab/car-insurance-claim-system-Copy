@@ -1,0 +1,217 @@
+{# AI damage analysis + repair estimation. Included by claim_detail.html; needs: claim, by_type, angles, analysis, money
+#}
+{% set a = analysis %}
+{% set analyzed = [] %}
+{% if a.analyzed_photos %}
+  {% for p in a.analyzed_photos %}
+    {% set _ = analyzed.append((p.file_type, p.short, p)) %}
+  {% endfor %}
+{% else %}
+  {% for key, short in angles %}{% if key in by_type %}{% set _ = analyzed.append((key, short, by_type[key])) %}{% endif %}{% endfor %}
+{% endif %}
+
+<section class="section" id="damage-analysis">
+  <h2 class="sec-title">AI damage analysis
+    {% if a.status == 'COMPLETE' %}<span class="cnt">{{ a.confirmed_count }} damage area{{ '' if a.confirmed_count == 1
+      else 's' }} detected</span>{% endif %}
+    {% if a.ai_ready %}
+    <form class="dl-form" method="post" action="{{ url_for('admin.analyze_claim', claim_id=claim.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="dl" type="submit">{{ 'Re-run analysis' if a.status == 'COMPLETE' else 'Run AI damage analysis'
+        }}</button>
+    </form>
+    {% endif %}
+  </h2>
+
+  {% if a.status == 'COMPLETE' and a.by_type_breakdown %}
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px;">
+    <span style="font-weight: 700; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em;">Breakdown by type:</span>
+    {% for type_label, count in a.by_type_breakdown.items() %}
+    <span class="ocr-chip ok" style="margin-top: 0;">{{ type_label }}: {{ count }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if a.status == 'COMPLETE' and analyzed %}
+  <div class="da-panel" data-damage-viewer>
+    <div class="da-toolbar">
+      <div class="da-tabs" role="tablist" aria-label="Photo">
+        {% for key, short, f in analyzed %}
+        {% set n = (a.by_file.get(f.id) or [])|selectattr('review_status', 'equalto', 'CONFIRMED')|list|length %}
+        <button type="button" role="tab" class="da-tab {{ 'active' if loop.first }}" data-target="da-{{ f.id }}"
+          aria-selected="{{ 'true' if loop.first else 'false' }}">
+          {{ short }}{% if n %}<span class="da-count">{{ n }}</span>{% endif %}
+        </button>
+        {% endfor %}
+      </div>
+      <div class="da-mode" role="group" aria-label="View">
+        <button type="button" class="da-mode-btn" data-mode="original" aria-pressed="false">Original</button>
+        <button type="button" class="da-mode-btn active" data-mode="analysis" aria-pressed="true">Damage analysis</button>
+      </div>
+    </div>
+
+    {% for key, short, f in analyzed %}
+    {% set dets = a.by_file.get(f.id) or [] %}
+    {% set pr = a.photo_results.get(f.id|string) or {} %}
+    <div class="da-stage {{ 'active' if loop.first }}" id="da-{{ f.id }}" role="tabpanel">
+      <div class="da-frame show-overlay">
+        <img src="{{ url_for('admin.claim_file', file_id=f.id) }}" alt="{{ f.title }} (original evidence)"
+          draggable="false">
+        <div class="da-overlay" aria-label="Detected damage">
+          {% for d in dets %}
+          {% if d.box and d.box.w > 0 and d.box.h > 0 %}
+          {% set cost_str = (money(d.cost_min, a.currency) ~ ' – ' ~ money(d.cost_max, a.currency)) if d.cost_min is not none else 'Needs manual assessment' %}
+          <button type="button"
+            class="da-box {{ 'possible' if d.review_status == 'POSSIBLE' else 'sev-' ~ d.severity|lower }}"
+            style="left:{{ d.box.x * 100 }}%;top:{{ d.box.y * 100 }}%;width:{{ d.box.w * 100 }}%;height:{{ d.box.h * 100 }}%"
+            data-label="{{ d.label }}"
+            data-confidence="{% if d.confidence is not none %}{{ '%.0f'|format(d.confidence * 100) }}%{% endif %}"
+            data-location="{{ d.location or d.part_label }}"
+            data-severity="{{ d.severity_label }}"
+            data-cost="{{ cost_str }}"
+            data-status="{% if d.review_status == 'POSSIBLE' %}Possible damage — requires manual review{% elif d.cost_min is none %}Needs manual assessment{% elif not d.is_primary %}Counted once (also seen in another photo){% endif %}"
+            data-reason="{{ d.reason }}"
+            aria-label="{{ d.label }}{% if d.confidence is not none %}, {{ '%.0f'|format(d.confidence * 100) }} percent{% endif %}">
+            <span class="da-tag">{{ d.label }}{% if d.confidence is not none %} · {{ '%.0f'|format(d.confidence * 100) }}%{% endif %}</span>
+          </button>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div class="da-pop" role="dialog" hidden>
+          <button type="button" class="da-pop-x" aria-label="Close">✕</button>
+          <b data-k="label"></b>
+          <em data-k="status"></em>
+          <dl>
+            <div>
+              <dt>Confidence</dt>
+              <dd data-k="confidence"></dd>
+            </div>
+            <div>
+              <dt>Location</dt>
+              <dd data-k="location"></dd>
+            </div>
+            <div>
+              <dt>Severity</dt>
+              <dd data-k="severity"></dd>
+            </div>
+            <div>
+              <dt>Estimated repair</dt>
+              <dd data-k="cost"></dd>
+            </div>
+          </dl>
+          <p data-k="reason"></p>
+        </div>
+      </div>
+
+      <div class="da-summary">
+        {% if pr.status == 'FAILED' %}
+        <div class="da-empty warn">This photo could not be analyzed ({{ pr.error }}). Review it manually.</div>
+        {% elif pr.inconsistent or pr.status == 'INCONSISTENT' or (not dets and pr.notes_has_damage) %}
+        <div class="da-empty warn">AI result inconsistent — review manually{% if pr.notes %}: {{ pr.notes }}{% endif %}</div>
+        {% elif not dets %}
+        <div class="da-empty">No visible damage detected in this photo{% if pr.notes %}: {{ pr.notes }}{% else %}.{%
+          endif %} Review manually to confirm.</div>
+        {% else %}
+        <div class="da-sum-head">Damage detected</div>
+        <ul class="da-list">
+          {% for d in dets %}
+          <li class="{{ 'possible' if d.review_status == 'POSSIBLE' }}">
+            <span class="warn-ico" aria-hidden="true">⚠</span>
+            <span class="da-name">{{ d.label }}<small>{{ d.location or d.part_label }} · {{ d.reason }}</small></span>
+            <span class="da-sev">{{ d.severity_label }}</span>
+            <span class="da-conf conf-{{ d.confidence_label|lower }}">
+              {% if d.review_status == 'POSSIBLE' %}Possible — manual review
+              {% elif d.confidence is not none %}{{ d.confidence_label }} confidence · {{ '%.0f'|format(d.confidence * 100) }}%
+              {% else %}{{ d.confidence_label }} confidence{% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% set c = dets|selectattr('review_status', 'equalto', 'CONFIRMED')|list|length %}
+        <div class="da-total-line">{{ c }} damage area{{ '' if c == 1 else 's' }} detected{% if dets|length > c %} · {{
+          dets|length - c }} possible{% endif %}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    <p class="ai-note">AI-assisted assessment. Boxes are approximate. Final damage must be confirmed by an authorized
+      claims assessor.</p>
+  </div>
+
+  {% elif a.status == 'PENDING' %}
+  <div class="da-state" data-pending>
+    <span class="da-spinner" aria-hidden="true"></span>
+    <div><b>AI damage analysis in progress</b><span>This page refreshes automatically when it’s ready (usually under a
+        minute).</span></div>
+  </div>
+
+  {% else %}
+  <div class="da-state">
+    <span class="da-state-ico" aria-hidden="true">!</span>
+    <div><b>AI analysis unavailable</b>
+      <span>
+        {% if a.status == 'FAILED' %}{{ a.message }}
+        {% elif a.ai_ready %}This claim has not been analyzed yet. Use “Run AI damage analysis” above.
+        {% else %}{{ a.ai_reason or a.message }}{% endif %}
+      </span>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<section class="section" id="repair-estimation">
+  <div class="est-card">
+    <div class="est-head">
+      <div>
+        <h2>Repair estimation</h2>
+        <p>Estimated repair cost based on the submitted vehicle evidence.</p>
+      </div>
+      <span class="badge pending est-badge">Pending final inspection</span>
+    </div>
+
+    {% if a.status == 'COMPLETE' and (a.damage_items or a.unpriced) %}
+    <div class="est-body single">
+      <div class="est-block">
+        <div class="est-label">Detected damage items</div>
+        <ul class="est-items">
+          {% for d in a.damage_items %}
+          <li>
+            <span class="b">{{ d.label }}<small>{{ d.part_label }} · {{ d.severity_label }}</small></span>
+            <span class="amt">{{ money(d.cost_min, a.currency) }} – {{ money(d.cost_max, a.currency) }}</span>
+          </li>
+          {% endfor %}
+          {% for d in a.unpriced %}
+          <li class="unpriced">
+            <span class="b">{{ d.label }}<small>{{ d.part_label }} · {{ d.severity_label if d.severity_label else 'Uncertain' }}</small></span>
+            <span class="amt" style="color: #8A5E00; font-weight: 600; font-size: 12.5px;">Needs manual assessment</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% if a.excluded_count %}
+        <div class="est-note" style="margin-top: 12px;">{{ a.excluded_count }} item{{ '' if a.excluded_count == 1 else 's' }} flagged &ldquo;needs manual assessment&rdquo; excluded from total estimate.</div>
+        {% endif %}
+        {% if a.possible %}
+        <div class="est-note">{{ a.possible|length }} possible damage area{{ '' if a.possible|length == 1 else 's' }} below the confidence threshold {{ 'is' if a.possible|length == 1 else 'are' }} not included. Review manually.</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="est-total">
+      <div><span>Estimated total</span><small>Estimated cost range (sum of minimums to sum of maximums) · Subject to final inspection</small></div>
+      <b>{{ money(a.total_min, a.currency) }} – {{ money(a.total_max, a.currency) }}</b>
+    </div>
+    {% elif a.status == 'COMPLETE' %}
+    <div class="est-body single">
+      <div class="est-none">No damage detected by AI. Estimate unavailable. Inspect photos and video manually.</div>
+    </div>
+    {% else %}
+    <div class="est-body single">
+      <div class="est-none">
+        {% if a.status == 'PENDING' %}The estimate will appear when the AI damage analysis finishes.
+        {% else %}Estimate unavailable. No AI damage analysis for this claim. Assess and price the repair manually.{%
+        endif %}
+      </div>
+    </div>
+    {% endif %}
+    <p class="est-disclaimer">Sample estimate based on AI-detected damage. Final cost must be confirmed by an authorized claims assessor.</p>
+  </div>
+</section>

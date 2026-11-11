@@ -1,0 +1,98 @@
+{% macro logo_mark(cls='logo-mark') %}
+<svg class="{{ cls }}" viewBox="0 0 40 40" aria-hidden="true">
+  <path d="M20 2.5 5 8v10.5C5 28 11.4 35 20 37.5 28.6 35 35 28 35 18.5V8L20 2.5Z" fill="#F5B800"/>
+  <path d="M20 6.2 8.4 10.5v8c0 7.6 4.9 13.2 11.6 15.4 6.7-2.2 11.6-7.8 11.6-15.4v-8L20 6.2Z" fill="none" stroke="#0B0F14" stroke-opacity=".25" stroke-width="1.2"/>
+  <path d="M12.2 22.4v-2.6l1.9-4.3c.4-.9 1.2-1.4 2.2-1.4h7.4c1 0 1.8.5 2.2 1.4l1.9 4.3v2.6c0 .6-.5 1.1-1.1 1.1h-13.4c-.6 0-1.1-.5-1.1-1.1Z" fill="#0B0F14"/>
+  <path d="M14.6 19.4 15.9 16.4h8.2l1.3 3Z" fill="#F5B800"/>
+  <circle cx="15.3" cy="21.3" r="1.1" fill="#FFC928"/><circle cx="24.7" cy="21.3" r="1.1" fill="#FFC928"/>
+  <rect x="13.3" y="23.5" width="2.6" height="2.4" rx=".8" fill="#0B0F14"/><rect x="24.1" y="23.5" width="2.6" height="2.4" rx=".8" fill="#0B0F14"/>
+</svg>
+{% endmacro %}
+
+{% macro topnav() %}
+<header class="topnav">
+  <a class="logo" href="{{ url_for('customer.welcome') }}" aria-label="Car Insure home">
+    {{ logo_mark() }}
+    <span class="logo-text">CAR INSURE<small>Protect your journey</small></span>
+  </a>
+  <a class="nav-help" href="tel:18001234567">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>
+    1800-123-4567
+  </a>
+</header>
+{% endmacro %}
+
+{% macro progress(current) %}
+{% set steps = ['Details', 'Evidence', 'Submit'] %}
+<nav class="progress" aria-label="Claim progress">
+  {% for label in steps %}
+    {% set n = loop.index %}
+    <div class="step {{ 'done' if n < current else ('active' if n == current else '') }}" {% if n == current %}aria-current="step"{% endif %}>
+      <span class="num">{% if n < current %}✓{% else %}{{ n }}{% endif %}</span>
+      <span>{% if n == 2 %}<span class="label-long">Vehicle </span>{% endif %}{{ label }}</span>
+    </div>
+    {% if not loop.last %}<span class="bar {{ 'done' if n < current else '' }}"></span>{% endif %}
+  {% endfor %}
+</nav>
+{% endmacro %}
+
+{% macro icon_check() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>{% endmacro %}
+{% macro icon_alert() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>{% endmacro %}
+{% macro icon_lock() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>{% endmacro %}
+{% macro icon_shield() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 8.8 8 10 4.6-1.2 8-5 8-10v-6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke-linecap="round"/></svg>{% endmacro %}
+{% macro icon_car() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15v-3l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 7l2 5v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M3.5 12h17M7 16v2M17 16v2"/><circle cx="7" cy="14" r=".6" fill="currentColor"/><circle cx="17" cy="14" r=".6" fill="currentColor"/></svg>{% endmacro %}
+{% macro icon_bolt() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>{% endmacro %}
+{% macro icon_camera() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>{% endmacro %}
+{% macro icon_upload() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M4 15v4h16v-4"/></svg>{% endmacro %}
+{% macro icon_video() %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg>{% endmacro %}
+
+{# Side-view car used on the verify page #}
+{% macro car_side(width=74) %}
+<svg viewBox="0 0 120 52" width="{{ width }}" height="{{ (width * 52 / 120)|round|int }}" aria-hidden="true">
+  <path d="M10 36c0-5 2-8 7-9l14-3 13-11c3-2.5 6-3.5 10-3.5h22c4 0 7 1.5 10 4l10 10 9 2c4 1 6 4 6 8v4c0 2-1.5 3-3 3H13c-2 0-3-1-3-3v-1.5Z" fill="#F5B800"/>
+  <path d="M48 15c2-2 4-3 7-3h20c3 0 5 1 7 3l7 8H41l7-8Z" fill="#0B0F14" fill-opacity=".55"/>
+  <path d="M64 12v11" stroke="#F5B800" stroke-width="2.5"/>
+  <rect x="104" y="30" width="7" height="3" rx="1.5" fill="#FF3A24"/>
+  <circle cx="34" cy="40" r="9" fill="#0B0F14" stroke="#fff" stroke-width="3"/><circle cx="34" cy="40" r="3" fill="#C9CED6"/>
+  <circle cx="92" cy="40" r="9" fill="#0B0F14" stroke="#fff" stroke-width="3"/><circle cx="92" cy="40" r="3" fill="#C9CED6"/>
+</svg>
+{% endmacro %}
+
+{# Framing guides shown inside each empty evidence card (line art, gold accents) #}
+{% macro angle_guide(key) %}
+<svg class="guide" viewBox="0 0 200 110" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if key == 'front_photo' %}
+  <g transform="translate(30 18) scale(1)">
+    <path d="M32 30 42 8h56l10 22"/>
+    <path d="M14 34c0-4 4-6 8-6h96c4 0 8 2 8 6v32c0 3-2 5-5 5H19c-3 0-5-2-5-5Z"/>
+    <path class="g" d="M20 40h22M98 40h22" stroke-width="5"/>
+    <path class="g" d="M50 42h40" stroke-width="3"/>
+    <rect class="g" x="54" y="52" width="32" height="10" rx="2"/>
+    <path d="M22 71v10M118 71v10"/>
+  </g>
+{% elif key in ('rear_photo', 'back_photo') %}
+  {% if key == 'back_photo' %}<path class="g" d="M20 100h160" stroke-dasharray="6 8" opacity=".6"/>{% endif %}
+  {% set s = 1 if key == 'rear_photo' else 0.72 %}
+  <g transform="translate({{ 100 - 70*s }} {{ 18 + (1-s)*50 }}) scale({{ s }})">
+    <path d="M32 30 42 8h56l10 22"/>
+    <path d="M14 34c0-4 4-6 8-6h96c4 0 8 2 8 6v32c0 3-2 5-5 5H19c-3 0-5-2-5-5Z"/>
+    <path class="g" d="M20 40h22M98 40h22" stroke-width="5"/>
+    <rect class="g" x="54" y="50" width="32" height="10" rx="2"/>
+    <path d="M22 71v10M118 71v10"/>
+  </g>
+{% elif key in ('left_photo', 'right_photo') %}
+  <g {% if key == 'right_photo' %}transform="translate(200 0) scale(-1 1)"{% endif %}>
+    <path d="M18 70c0-8 3-12 10-13l22-5 20-18c5-4 9-5 15-5h34c6 0 10 2 15 6l15 16 14 3c6 1 9 6 9 12v6c0 3-2 4-4 4H22c-3 0-4-2-4-4Z"/>
+    <path d="M78 34v20M60 52h86"/>
+    <circle cx="52" cy="78" r="13"/><circle cx="150" cy="78" r="13"/>
+    <path class="g" d="M20 64h10" stroke-width="5"/>
+    <path class="g" d="M26 100h150" stroke-dasharray="6 8" opacity=".6"/>
+  </g>
+{% elif key == 'chassis_photo' %}
+  <rect x="22" y="22" width="156" height="66" rx="8"/>
+  <path class="g" d="M36 22v-8M164 22v-8" opacity=".6"/>
+  <text x="100" y="50" text-anchor="middle" fill="currentColor" stroke="none" font-family="Montserrat, sans-serif" font-weight="800" font-size="13" letter-spacing="3">VIN / CHASSIS</text>
+  <path class="g" d="M38 68h18M62 68h18M86 68h18M110 68h18M134 68h28" stroke-width="5"/>
+{% endif %}
+</svg>
+{% endmacro %}

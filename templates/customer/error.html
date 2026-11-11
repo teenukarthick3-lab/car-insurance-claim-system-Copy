@@ -1,0 +1,19 @@
+{% extends "customer/base.html" %}
+{% from "customer/_macros.html" import topnav, icon_alert %}
+{% block title %}{{ title }}{% endblock %}
+{% block body %}
+<section class="hero hero-sub" style="{{ hero_style('hero') }}">
+  {{ topnav() }}
+  <div class="wrap narrow">
+    <div class="accent-bar"></div>
+    <h1>{{ title }}</h1>
+  </div>
+</section>
+<main class="wrap narrow">
+  <section class="card overlap">
+    <div class="alert alert-error" style="margin-top:0">{{ icon_alert() }}<div><strong>{{ title }}</strong><p>{{ text }}</p></div></div>
+    <a class="btn btn-gold btn-block mt" href="{{ url_for('customer.welcome') }}#start">Start a claim</a>
+  </section>
+</main>
+<div style="height:40px"></div>
+{% endblock %}

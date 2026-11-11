@@ -1,0 +1,227 @@
+{% extends "customer/base.html" %}
+{% from "customer/_macros.html" import topnav, progress, icon_check, icon_alert, icon_lock, icon_camera, icon_upload, icon_video, angle_guide %}
+{% block title %}Vehicle inspection{% endblock %}
+{% set titles = {'front_photo': 'Front view', 'back_photo': 'Back view', 'left_photo': 'Left side', 'right_photo': 'Right side', 'chassis_photo': 'Chassis number', 'damage_video': 'Damage video (optional)'} %}
+{% set hints = {
+  'front_photo': 'Stand close in front of the car. Fit the full front bumper and number plate in the frame.',
+  'back_photo': 'Step back a few metres to show the whole back of the vehicle.',
+  'left_photo': 'Capture the full left side, front wheel to rear wheel.',
+  'right_photo': 'Capture the full right side, front wheel to rear wheel.',
+  'chassis_photo': 'Make sure every character of the chassis number is readable.',
+  'damage_video': 'Optional. Show the damaged areas clearly from different angles. Walk slowly, 30–60 seconds.'
+} %}
+
+{% macro cfield(name, label, type, placeholder, autocomplete, inputmode, val, err) %}
+<div>
+  <label for="{{ name }}" style="display:block; font-weight:700; font-size:13px; margin-bottom:6px;">{{ label }} <span style="color:var(--muted); font-weight:600;">(optional)</span></label>
+  <input type="{{ type }}" id="{{ name }}" name="{{ name }}" value="{{ val }}" placeholder="{{ placeholder }}"
+         autocomplete="{{ autocomplete }}" {% if inputmode %}inputmode="{{ inputmode }}"{% endif %} maxlength="120"
+         style="display:block; width:100%; padding:12px; border:1px solid var(--line); border-radius:8px; font:inherit; background:#fff;">
+  <div class="slot-error {{ 'show' if err }}" id="err-{{ name }}" role="alert">{{ err or '' }}</div>
+</div>
+{% endmacro %}
+
+{% macro slot(key, meta) %}
+{% set is_video = meta.kind == 'video' %}
+{% set optional = not meta.get('required', True) %}
+<section class="slot {{ 'video-card' if is_video }}" id="slot-{{ key }}" data-key="{{ key }}" data-kind="{{ meta.kind }}" data-optional="{{ 1 if optional else 0 }}" data-label="{{ meta.short }}" aria-labelledby="t-{{ key }}">
+  <div class="shot-area">
+    {% if is_video %}
+      <div class="play-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5Z"/></svg></div>
+      <span class="rec" aria-hidden="true">REC</span>
+    {% else %}
+      {{ angle_guide(key) }}
+      <span class="shot-tag" aria-hidden="true">{{ titles[key] }}</span>
+    {% endif %}
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+    <div class="media" data-role="media"></div>
+    {% if not is_video %}
+    <div class="ai-scrim" aria-hidden="true">
+      <span class="ai-scrim-checking"><span class="scan-spinner"></span>Analyzing photo…</span>
+      <span class="ai-scrim-bad">✕</span>
+    </div>
+    <span class="ai-chip" aria-hidden="true">✓ Verified</span>
+    {% endif %}
+  </div>
+  <div class="slot-body">
+    <h3 class="slot-title" id="t-{{ key }}">{{ titles[key] }}<span class="ok" aria-hidden="true">{{ icon_check() }}</span></h3>
+    <p class="slot-desc">{{ hints[key] }}</p>
+
+    <div class="pick">
+      <label class="pick-btn primary">
+        <input class="visually-hidden" type="file" data-role="camera" accept="{{ 'video/*' if is_video else 'image/*' }}" capture="environment">
+        {% if is_video %}{{ icon_video() }} + Add video{% else %}{{ icon_camera() }} + Add photo{% endif %}
+      </label>
+      <label class="pick-btn secondary">
+        <input class="visually-hidden" type="file" data-role="library"
+               accept="{{ 'video/mp4,video/quicktime,.mp4,.mov' if is_video else 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp' }}">
+        {{ icon_upload() }} Upload
+      </label>
+    </div>
+
+    <div class="done-row">
+      <span class="ok-text" data-role="state-text" aria-live="polite">✓ {{ 'Video added' if is_video else 'Photo added' }}</span>
+      <span class="fname" data-role="fname"></span>
+    </div>
+    {% if key == 'chassis_photo' %}
+    <div class="chassis-read" data-role="chassis" hidden>
+      <span class="chassis-label">Chassis number</span>
+      <b class="chassis-value" data-role="chassis-value"></b>
+      <span class="chassis-note" data-role="chassis-note"></span>
+    </div>
+    {% endif %}
+    <div class="ai-status" data-role="ai-status" role="alert" hidden>
+      <strong data-role="ai-title"></strong>
+      <p data-role="ai-message"></p>
+    </div>
+    <div class="preview-actions">
+      <button type="button" class="mini-btn replace" data-action="replace">{{ 'Replace' if is_video else 'Replace photo' }}</button>
+      <button type="button" class="mini-btn retry" data-action="retry" hidden>Try again</button>
+      <button type="button" class="mini-btn remove" data-action="remove">Remove</button>
+    </div>
+    <div class="slot-error" data-role="error" role="alert"></div>
+  </div>
+</section>
+{% endmacro %}
+
+{% block body %}
+<section class="hero hero-sub" style="{{ hero_style('inspection') }}">
+  {{ topnav() }}
+  <div class="wrap">
+    {{ progress(2) }}
+    <div class="accent-bar"></div>
+    <h1>Vehicle inspection</h1>
+    <p class="hero-lead">Capture your vehicle from every angle.</p>
+    <div class="inspect">
+      <svg class="car-top" viewBox="0 0 92 150" aria-hidden="true">
+        <rect x="10" y="6" width="72" height="138" rx="26" fill="rgba(0,0,0,.35)" stroke="rgba(255,255,255,.4)" stroke-width="2"/>
+        <rect class="zone" data-zone="front_photo" x="18" y="10" width="56" height="12" rx="5"/>
+        <text class="zone-label" x="46" y="19" text-anchor="middle" font-size="8">FRONT</text>
+        <rect class="zone" data-zone="chassis_photo" x="22" y="26" width="48" height="16" rx="8"/>
+        <text class="zone-label" x="46" y="38" text-anchor="middle">VIN</text>
+        <rect class="zone" data-zone="damage_video" x="24" y="46" width="44" height="48" rx="8"/>
+        <text class="zone-label" x="46" y="72" text-anchor="middle">VIDEO</text>
+        <rect class="zone" data-zone="left_photo" x="12" y="40" width="9" height="66" rx="4"/>
+        <rect class="zone" data-zone="right_photo" x="71" y="40" width="9" height="66" rx="4"/>
+        <rect class="zone" data-zone="back_photo" x="18" y="102" width="56" height="28" rx="6"/>
+        <text class="zone-label" x="46" y="118" text-anchor="middle">BACK</text>
+        <text class="zone-label" x="4" y="76" text-anchor="middle" transform="rotate(-90 4 76)">LEFT</text>
+        <text class="zone-label" x="88" y="76" text-anchor="middle" transform="rotate(90 88 76)">RIGHT</text>
+      </svg>
+      <div>
+        <div class="inspect-count"><span id="done-count">0</span><small> of <span id="total-count">6</span> captured</small></div>
+        <div class="meter"><i id="meter"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main>
+  <form id="evidence-form" method="post" action="{{ url_for('customer.submit') }}" enctype="multipart/form-data" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="wrap">
+
+      <section id="customer-info" style="margin-top:24px; background:#fff; border-radius:var(--r); padding:24px; box-shadow:var(--shadow);">
+        <div class="accent-bar" style="margin-bottom:12px;"></div>
+        <h2 style="font-family:var(--head); font-weight:800; font-size:18px; text-transform:uppercase; margin:0 0 14px;">1. Customer Information <span style="font-size:13px; font-weight:600; color:var(--muted); text-transform:none;">(Optional)</span></h2></h2>
+        <div style="display:grid; gap:14px; max-width:480px;">
+          {{ cfield('customer_name', 'Customer Name', 'text', 'Enter your full name', 'name', '', values.get('customer_name', ''), field_errors.get('customer_name')) }}
+          {{ cfield('mobile', 'Mobile Number', 'tel', 'Enter your mobile number', 'tel', 'tel', values.get('mobile', ''), field_errors.get('mobile')) }}
+          {{ cfield('email', 'Email Address', 'email', 'Enter your email address', 'email', 'email', values.get('email', ''), field_errors.get('email')) }}
+        </div>
+      </section>
+
+      <h2 style="font-family:var(--head); font-weight:800; font-size:18px; text-transform:uppercase; margin:28px 0 12px;">2. Vehicle Photos</h2>
+
+      <div class="slots">
+        {% for key, meta in evidence_types.items() if meta.kind == 'image' and key != 'chassis_photo' %}{{ slot(key, meta) }}{% endfor %}
+      </div>
+
+      <section class="damage-card" id="damage-photos-slot" style="margin-top: 24px; background: #fff; border-radius: var(--r); padding: 24px; box-shadow: var(--shadow);">
+        <div class="accent-bar" style="margin-bottom: 12px;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 id="damage-photos-title" style="font-family:var(--head); font-weight:800; font-size:18px; text-transform:uppercase; margin:0 0 6px;">
+              Damage Photos <span style="font-size:13px; font-weight:600; color:var(--muted); text-transform:none;">(Required – at least one)</span>
+            </h2>
+            <p style="font-size:13.5px; color:var(--muted); margin:0; max-width:55ch;">
+              Add at least one close-up photo of the damage (dents, scratches, cracks, or paint damage). You can choose or capture multiple photos.
+            </p>
+          </div>
+          <div class="pick" style="margin:0;">
+            <label class="pick-btn primary" style="cursor:pointer;">
+              <input class="visually-hidden" type="file" id="damage-photo-camera" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" capture="environment">
+              {{ icon_camera() }} + Take photo
+            </label>
+            <label class="pick-btn secondary" style="cursor:pointer;">
+              <input class="visually-hidden" type="file" id="damage-photos-library" multiple accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp">
+              {{ icon_upload() }} Add photos
+            </label>
+          </div>
+        </div>
+
+        <div id="damage-previews" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; margin-top:16px;"></div>
+        <div id="damage-photos-empty" style="padding:18px; border:2px dashed var(--line); border-radius:10px; text-align:center; color:var(--muted); font-size:13px; margin-top:14px;">
+          No damage photos added. Tap <b>Take photo</b> or <b>Add photos</b> above to upload close-ups of damaged areas.
+        </div>
+        <div class="slot-error" id="damage-photos-error" role="alert"></div>
+      </section>
+
+      <div class="slots" style="margin-top:24px;">
+        {{ slot('chassis_photo', evidence_types['chassis_photo']) }}
+        {% for key, meta in evidence_types.items() if meta.kind == 'video' %}{{ slot(key, meta) }}{% endfor %}
+      </div>
+    </div>
+
+    <section class="ready" aria-labelledby="ready-title">
+      <div class="wrap">
+        <div class="accent-bar"></div>
+        <h2 class="section-title" id="ready-title">Ready to submit?</h2>
+        <p class="section-lead">Review your evidence and submit your claim securely.</p>
+        <ul class="checklist">
+          
+          <li data-check="front_photo">Front view</li>
+          <li data-check="back_photo">Back view</li>
+          <li data-check="left_photo">Left side</li>
+          <li data-check="right_photo">Right side</li>
+          <li data-check="damage_photos">Damage photo</li>
+          <li data-check="chassis_photo">Chassis number</li>
+        </ul>
+        <div class="alert alert-error" id="missing-box" role="alert" {% if not server_error %}hidden{% endif %}>
+          {{ icon_alert() }}
+          <div>
+            <strong id="missing-title">{{ 'We couldn’t submit your claim' if server_error else 'Please complete your vehicle evidence.' }}</strong>
+            <p id="missing-text">{{ server_error or 'Missing:' }}</p>
+            <ul id="missing-list"></ul>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-gold btn-submit not-ready" id="submit-btn">
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="submit-label">Submit claim</span> <span class="arrow" aria-hidden="true">→</span>
+        </button>
+        <div class="secure-note">{{ icon_lock() }} Files are sent securely to Car Insure</div>
+      </div>
+    </section>
+  </form>
+</main>
+
+<div class="overlay" id="upload-overlay" role="dialog" aria-modal="true" aria-labelledby="up-title">
+  <div class="overlay-card">
+    <h3 id="up-title">Submitting your claim</h3>
+    <p id="up-sub">Uploading your photos and video. Keep this page open.</p>
+    <div class="up-bar"><i id="up-bar"></i></div>
+    <div class="up-pct" id="up-pct">0%</div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.CLAIM_CONFIG = {
+    maxImageMB: {{ max_image_mb }},
+    maxVideoMB: {{ max_video_mb }},
+    submitUrl: "{{ url_for('customer.submit') }}",
+    validateUrl: "{{ url_for('customer.validate_photo') }}"
+  };
+</script>
+<script src="{{ url_for('static', filename='js/evidence.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+{% from "customer/_macros.html" import logo_mark %}
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} | Car Insure</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}"></head>
+<body>
+<main class="login-page" style="{{ hero_style('login') }}">
+  <div class="login-brand">{{ logo_mark('') }}<span><b>CAR INSURE</b><small>Insurance portal</small></span></div>
+  <div class="login-stack">
+    <h1>{{ title }}</h1>
+    <p class="sub">{{ text }}</p>
+    <a class="btn btn-gold" style="height:50px;padding:0 28px" href="{{ url_for('admin.dashboard') }}">Back to dashboard</a>
+  </div>
+</main>
+</body></html>

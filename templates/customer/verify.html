@@ -1,0 +1,82 @@
+{% extends "customer/base.html" %}
+{% from "customer/_macros.html" import topnav, progress, icon_check, icon_alert, icon_lock, car_side %}
+{% block title %}{{ 'Policy verified' if eligible else 'Policy not eligible' }}{% endblock %}
+{% block body %}
+<section class="hero hero-sub" style="{{ hero_style('hero') }}">
+  {{ topnav() }}
+  <div class="wrap narrow">
+    {{ progress(1) }}
+    <div class="accent-bar"></div>
+    <h1>{{ 'Confirm your details' if eligible else 'We found your policy' }}</h1>
+    <p class="hero-lead">{{ 'Fetched automatically from your policy record.' if eligible else 'But a claim can’t be started online yet.' }}</p>
+  </div>
+</section>
+
+<main class="wrap narrow">
+  <section class="card overlap">
+    {% if eligible %}
+      <span class="badge badge-ok">{{ icon_check() }} Policy verified</span>
+    {% else %}
+      <span class="badge badge-bad">{{ icon_alert() }} {{ 'Policy expired' if code == 'expired' else 'Policy not active' }}</span>
+    {% endif %}
+
+    <div class="vehicle-block">
+      {{ car_side(74) }}
+      <div>
+        <div class="model">{{ policy.vehicle_make }} {{ policy.vehicle_model }}</div>
+        <span class="plate">{{ policy.vehicle_number }}</span>
+      </div>
+    </div>
+
+    <dl class="details">
+      <div><dt>Customer</dt><dd>{{ policy.customer_name }}</dd></div>
+      <div><dt>Vehicle</dt><dd>{{ policy.vehicle_make }} {{ policy.vehicle_model }}</dd></div>
+      <div><dt>Registration</dt><dd>{{ policy.vehicle_number }}</dd></div>
+      <div><dt>Policy</dt><dd>{{ policy.policy_number }}</dd></div>
+      {% if masked_phone %}<div><dt>Registered phone</dt><dd>{{ masked_phone }}</dd></div>{% endif %}
+      <div><dt>Cover</dt><dd>{{ fmt(policy.policy_start_date) }} – {{ fmt(policy.policy_end_date) }}</dd></div>
+      <div><dt>Status</dt><dd><span class="dot {{ '' if eligible else 'bad' }}">{{ 'Active' if eligible else ('Expired' if code == 'expired' else policy.policy_status) }}</span></dd></div>
+    </dl>
+
+    {% if eligible %}
+      <form method="post" action="{{ url_for('customer.confirm_vehicle') }}" class="vehicle-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="vehicle_number">Vehicle registration number</label>
+          <input class="input input-plate {{ 'invalid' if vehicle_error }}" id="vehicle_number" name="vehicle_number"
+                 value="{{ vehicle_value }}" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                 maxlength="20" required aria-describedby="vehicle-hint">
+          <div class="hint" id="vehicle-hint">Check it matches the number plate of the vehicle in this claim.</div>
+        </div>
+        {% if vehicle_error %}
+        <div class="alert alert-error" role="alert">{{ icon_alert() }}<div><strong>Check the registration number</strong><p>{{ vehicle_error }}</p></div></div>
+        {% elif vehicle_prompt %}
+        <div class="alert alert-warn" role="alert">{{ icon_alert() }}<div><strong>Confirm your vehicle</strong>
+          <p>Please confirm the registration number of the vehicle in this claim to continue.</p></div></div>
+        {% endif %}
+        <button class="btn btn-gold btn-block mt" type="submit" id="confirm-btn">Continue <span class="arrow" aria-hidden="true">→</span></button>
+      </form>
+      <a class="btn btn-ghost btn-block mt-sm" href="{{ url_for('customer.welcome') }}#start">Not your vehicle? Use another policy</a>
+    {% else %}
+      <div class="alert alert-warn" role="alert">
+        {{ icon_alert() }}
+        <div><strong>Claim can’t continue online</strong><p>{{ message }}</p></div>
+      </div>
+      <a class="btn btn-gold btn-block mt" href="tel:18001234567">Call claims support</a>
+      <a class="btn btn-ghost btn-block mt-sm" href="{{ url_for('customer.welcome') }}#start">Try another policy number</a>
+    {% endif %}
+    <div class="secure-note">{{ icon_lock() }} Your information is securely protected</div>
+  </section>
+</main>
+<div style="height:40px"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var input = document.getElementById('vehicle_number');
+    if (!input) return;
+    input.addEventListener('input', function () { input.value = input.value.toUpperCase(); input.classList.remove('invalid'); });
+  })();
+</script>
+{% endblock %}

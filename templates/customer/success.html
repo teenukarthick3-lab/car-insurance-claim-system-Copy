@@ -1,0 +1,42 @@
+{% extends "customer/base.html" %}
+{% from "customer/_macros.html" import topnav, progress %}
+{% block title %}Claim received{% endblock %}
+{% block body %}
+<section class="hero dim" style="{{ hero_style('success') }}">
+  {{ topnav() }}
+  <div class="success">
+    <div class="wrap narrow">
+      {{ progress(4) }}
+      <div class="tick" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none"><path d="m13 25 7.5 7.5L35 17" stroke="#F5B800" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1>Claim received</h1>
+      <p class="hero-lead">Your vehicle claim has been successfully submitted.</p>
+
+      <div class="ref-label">Claim reference</div>
+      <div class="ref-code" id="ref">{{ reference }}</div>
+      <button class="copy-btn" type="button" id="copy-btn">Copy reference</button>
+
+      <ol class="next">
+        <li><span class="n">01</span><div><b>Keep your reference</b>Quote it whenever you contact us.</div></li>
+        <li><span class="n">02</span><div><b>We review your evidence</b>A claims officer checks your photos and video.</div></li>
+        <li><span class="n">03</span><div><b>We get in touch</b>You’ll hear from us on your registered phone.</div></li>
+      </ol>
+      <a class="btn btn-gold mt" style="margin-top:32px" href="{{ url_for('customer.welcome') }}">Return home</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('copy-btn').addEventListener('click', function () {
+    var btn = this, text = document.getElementById('ref').textContent.trim();
+    function done() { btn.textContent = 'Copied ✓'; setTimeout(function () { btn.textContent = 'Copy reference'; }, 1800); }
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done); }
+    else {
+      var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); done(); } catch (e) {} document.body.removeChild(t);
+    }
+  });
+</script>
+{% endblock %}

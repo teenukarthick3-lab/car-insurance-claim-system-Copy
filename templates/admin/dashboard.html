@@ -1,0 +1,78 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Dashboard' if show_cards else view_title }}{% endblock %}
+{% block heading %}{{ 'Claim dashboard' if show_cards else view_title }}{% endblock %}
+{% block content %}
+{% if show_cards %}
+<div class="stats">
+  <a class="stat total" href="{{ url_for('admin.claims') }}">
+    <div class="value">{{ stats.total }}</div><div class="label">Claims</div>
+    <div class="sub">{{ stats.today }} submitted today</div></a>
+  <a class="stat pending" href="{{ url_for('admin.claims', status='Pending Review') }}">
+    <div class="value">{{ stats['Pending Review'] }}</div><div class="label">Pending</div>
+    <div class="sub">Not yet opened</div></a>
+  <a class="stat review" href="{{ url_for('admin.claims', status='Under Review') }}">
+    <div class="value">{{ stats['Under Review'] }}</div><div class="label">Under review</div>
+    <div class="sub">Being assessed</div></a>
+  <a class="stat approved" href="{{ url_for('admin.approved') }}">
+    <div class="value">{{ stats['Approved'] }}</div><div class="label">Approved</div>
+    <div class="sub">Ready to settle</div></a>
+  <a class="stat rejected" href="{{ url_for('admin.rejected') }}">
+    <div class="value">{{ stats['Rejected'] }}</div><div class="label">Rejected</div>
+    <div class="sub">Closed without payout</div></a>
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>{{ view_title }}</h2>
+    <span class="meta">{{ claims|length }} shown</span>
+    <form class="filters" method="get">
+      <input type="search" name="q" value="{{ q }}" placeholder="Search claims" aria-label="Search claims">
+      <select name="status" aria-label="Filter by status" onchange="this.form.submit()">
+        <option value="">All statuses</option>
+        {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-dark" type="submit">Apply</button>
+      {% if q or status %}<a class="btn btn-light" href="{{ request.path }}">Clear</a>{% endif %}
+    </form>
+  </div>
+
+  {% if claims %}
+  <table>
+    <thead>
+      <tr>
+        <th>Claim reference</th>
+        <th>Policy number</th>
+        <th>Customer name</th>
+        <th>Vehicle number</th>
+        <th>Uploaded time</th>
+        <th>Status</th>
+        <th style="text-align:right">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in claims %}
+      <tr>
+        <td><a class="ref" href="{{ url_for('admin.claim_detail', claim_id=c.id) }}">{{ c.claim_reference }}</a></td>
+        <td class="strong">{{ c.policy_number }}</td>
+        <td>{{ c.customer_name }}<div class="cell-sub">{{ c.vehicle_make }} {{ c.vehicle_model }}</div></td>
+        <td>{% if c.vehicle_number %}<span class="plate">{{ c.vehicle_number }}</span>{% else %}<span class="cell-sub" style="font-style:italic">Manual review required</span>{% endif %}</td>
+        <td class="time"><b>{{ c.submitted_at|dt('%I:%M %p') }}</b><span class="cell-sub">{{ c.submitted_at|dt('%d %b %Y') }}</span></td>
+        <td><span class="badge {{ c.status|status_class }}">{{ c.status }}</span></td>
+        <td style="text-align:right"><a class="btn btn-gold btn-sm" href="{{ url_for('admin.claim_detail', claim_id=c.id) }}">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>
+    {% if q or status %}
+      <b>No claims match your filters</b>Try a different search term or status.
+    {% else %}
+      <b>No claims yet</b>Claims submitted from the customer link appear here automatically.
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

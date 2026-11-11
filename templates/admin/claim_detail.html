@@ -1,0 +1,355 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ claim.claim_reference }}{% endblock %}
+{% block crumbs %}<div class="crumbs"><a href="{{ url_for('admin.claims') }}">All claims</a> / {{ claim.claim_reference
+  }}</div>{% endblock %}
+{% block heading %}Claim assessment{% endblock %}
+{% macro ai_check(f) %}
+{% if f.validation_status == 'ACCEPTED' %}
+<div class="ai-line ok" title="{{ f.validation.observations }}">
+  <span class="ai-dot"></span>AI check: expected {{ f.expected_view|view_name }} · detected {{ f.detected_view|view_name
+  }} · {{ '%.0f'|format((f.confidence or 0) * 100) }}%
+</div>
+{% elif f.validation_status == 'NOT_VERIFIED' %}
+<div class="ai-line warn"><span class="ai-dot"></span></div>
+{% elif f.file_type != 'damage_video' %}
+<div class="ai-line muted"><span class="ai-dot"></span></div>
+{% endif %}
+{% endmacro %}
+{% block content %}
+{% set by_type = {} %}
+{% for f in files %}{% set _ = by_type.update({f.file_type: f}) %}{% endfor %}
+{% set angles = [('front_photo', 'Front'), ('back_photo', 'Back'), ('left_photo', 'Left'), ('right_photo', 'Right')] %}
+{% if 'rear_photo' in by_type and 'front_photo' not in by_type %}
+{% set angles = [('rear_photo', 'Rear View (previous)'), ('back_photo', 'Back'), ('left_photo', 'Left'), ('right_photo',
+'Right')] %}
+{% elif 'rear_photo' in by_type %}
+{% set _ = angles.append(('rear_photo', 'Rear View (previous)')) %}
+{% endif %}
+{% set gallery = [] %}
+{% for key, short in angles %}{% if key in by_type %}{% set _ = gallery.append(by_type[key]) %}{% endif %}{% endfor %}
+{% if 'chassis_photo' in by_type %}{% set _ = gallery.append(by_type['chassis_photo']) %}{% endif %}
+
+<section class="claim-hero" style="{{ hero_style('login') }}">
+  <div class="claim-hero-top">
+    <span class="badge lg {{ claim.status|status_class }}">{{ claim.status }}</span>
+    <span style="color:rgba(255,255,255,.6);font-size:13px">Submitted {{ claim.submitted_at|dt }}</span>
+    <div class="actions"><a class="btn btn-light" href="{{ url_for('admin.claims') }}">← All claims</a></div>
+  </div>
+  <div class="facts">
+    <div class="fact">
+      <div class="k">Claim</div>
+      <div class="v">{{ claim.claim_reference }}</div>
+    </div>
+    <div class="fact">
+      <div class="k">Policy</div>
+      <div class="v">{{ claim.policy_number }}</div>
+      <div class="s">Cover to {{ fmt(claim.policy_end_date) }}</div>
+    </div>
+    <div class="fact">
+      <div class="k">Customer</div>
+      <div class="v">{{ claim.customer_name }}</div>
+      <div class="s">{{ claim.customer_phone }}</div>
+    </div>
+    <div class="fact">
+      <div class="k">Vehicle  </div>
+      {% if claim.vehicle_number %}
+      <div class="v">{{ claim.vehicle_number }}</div>
+      <div class="s">Read from photo</div>
+      {% else %}
+      <div class="v" style="font-size:0.92rem;line-height:1.3;color:var(--gold)">Manual review required - see vehicle photo</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="detail-grid">
+  <div>
+    <section class="section">
+      <h2 class="sec-title">Vehicle evidence <span class="cnt">{{ (gallery|length) - (1 if 'chassis_photo' in by_type
+          else 0) }} of 4 angles</span></h2>
+      <div class="gallery">
+        {% for key, short in angles %}{% if key in by_type %}{% set f = by_type[key] %}
+        <figure class="shot">
+          <button type="button" class="thumb" data-index="{{ gallery.index(f) }}"
+            aria-label="Open {{ f.title }} full size">
+            <img src="{{ url_for('admin.claim_file', file_id=f.id) }}" alt="{{ f.title }}" loading="lazy">
+            <span class="tag">{{ short }}</span>
+            <span class="zoom">⤢ Enlarge</span>
+          </button>
+          <figcaption class="shot-cap"><b>{{ f.title }}</b><a
+              href="{{ url_for('admin.claim_file', file_id=f.id, download=1) }}">Download</a></figcaption>
+          {{ ai_check(f) }}
+        </figure>
+        {% endif %}{% endfor %}
+      </div>
+    </section>
+
+    {% if 'damage_video' in by_type %}{% set v = by_type['damage_video'] %}
+    <section class="section">
+      <h2 class="sec-title">Video <span class="cnt">{{ v.file_size|filesize }}</span>
+        <a class="dl" href="{{ url_for('admin.claim_file', file_id=v.id, download=1) }}">Download video</a>
+      </h2>
+      <div class="video-box">
+        <video controls preload="metadata" playsinline>
+          <source src="{{ url_for('admin.claim_file', file_id=v.id) }}"
+            type="{{ 'video/mp4' if v.mime_type == 'video/quicktime' else v.mime_type }}">
+          Your browser can’t play this video. <a
+            href="{{ url_for('admin.claim_file', file_id=v.id, download=1) }}">Download it</a>.
+        </video>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if 'chassis_photo' in by_type %}{% set c = by_type['chassis_photo'] %}
+    <section class="section">
+      <h2 class="sec-title">Chassis number
+        <a class="dl" href="{{ url_for('admin.claim_file', file_id=c.id, download=1) }}">Download</a>
+      </h2>
+      <figure class="shot wide">
+        <button type="button" class="thumb" data-index="{{ gallery.index(c) }}"
+          aria-label="Open chassis number photo full size">
+          <img src="{{ url_for('admin.claim_file', file_id=c.id) }}" alt="Chassis Number Photo" loading="lazy">
+          <span class="tag">Chassis</span>
+          <span class="zoom">⤢ Enlarge</span>
+        </button>
+      </figure>
+      <div class="vin-read" id="chassis-number">
+        {{ ai_check(c) }}
+        {% set st = claim.chassis_ocr_status %}
+        {% set ok = st in ('VERIFIED', 'MANUALLY_VERIFIED') %}
+        <div class="chassis-box">
+          <div class="chassis-main">
+            <span class="k">Chassis number</span>
+            <b class="v">{{ claim.chassis_number or 'Manual review required' }}</b>
+          </div>
+          <div class="chassis-status">
+            <span class="k">OCR status</span>
+            <span class="ocr-chip lg {{ 'ok' if ok and claim.chassis_number else 'warn' }}">{{ '✓ ' if ok and
+              claim.chassis_number }}{{ 'Manual review required' if not claim.chassis_number or st in ('MANUAL_REVIEW',
+              'NOT_DETECTED') else st|chassis_status }}</span>
+            {% if st == 'MANUALLY_VERIFIED' and claim.chassis_verified_by %}<small>by {{ claim.chassis_verified_by
+              }}</small>
+            {% elif claim.chassis_audit.source == 'tesseract' %}<small></small>
+            {% elif claim.chassis_ocr_confidence %}<small>Confidence {{ '%.0f'|format(claim.chassis_ocr_confidence *
+              100) }}%</small>{% endif %}
+          </div>
+        </div>
+        {% if not ok %}
+        <div class="chassis-warn">Chassis number could not be confidently detected{% if claim.chassis_audit.reason %}
+          ({{ claim.chassis_audit.reason }}){% endif %}. Manual review required: check it against the photo and confirm
+          or correct it.</div>
+        {% endif %}
+        <form class="chassis-edit" method="post" action="{{ url_for('admin.update_chassis', claim_id=claim.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label for="chassis_number">{{ 'Correct chassis number' if ok else 'Confirm or correct' }}</label>
+          <input id="chassis_number" name="chassis_number" value="{{ claim.chassis_number or '' }}" maxlength="30"
+            autocomplete="off" spellcheck="false" placeholder="17-character chassis / VIN">
+          <button class="btn {{ 'btn-light' if ok else 'btn-gold' }} btn-sm" type="submit">{{ 'Save edit' if ok else
+            'Confirm' }}</button>
+        </form>
+        {% if claim.chassis_audit and claim.chassis_audit.reads %}
+        <!-- <details class="ocr-audit">
+          <summary>Original OCR text{% if claim.chassis_audit.engine_number %} · engine no. read: {{
+            claim.chassis_audit.engine_number }} (not used){% endif %}</summary>
+          <div class="ocr-meta">Source: {{ {'ai': 'AI vision model', 'tesseract': 'Tesseract
+            OCR'}.get(claim.chassis_audit.source, claim.chassis_audit.source) }}{% if claim.chassis_audit.corrections %}
+            · corrections: {{ claim.chassis_audit.corrections|join(', ') }}{% endif %}</div>
+          {% for r in claim.chassis_audit.reads[:3] %}{% if r.lines %}
+          <pre>{{ r.lines|join('\n') }}</pre>{% endif %}{% endfor %}
+        </details> -->
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if claim.damage_photos %}
+    <section class="section" id="damage-photos">
+      <h2 class="sec-title">Damage Photos <span class="cnt">{{ claim.damage_photos|length }} photo{{ 's' if
+          claim.damage_photos|length != 1 else '' }}</span></h2>
+      <div class="gallery">
+        {% for dp in claim.damage_photos %}
+        {% set dp_idx = gallery|length + loop.index0 %}
+        <figure class="shot">
+          <button type="button" class="thumb" data-index="{{ dp_idx }}"
+            aria-label="Open damage photo {{ loop.index }} full size">
+            <img src="{{ url_for('admin.damage_photo_file', photo_id=dp.id) }}" alt="Damage Photo {{ loop.index }}"
+              loading="lazy">
+            <span class="tag">{{ dp.damage_type }}</span>
+            <span class="zoom">⤢ Enlarge</span>
+          </button>
+          <figcaption class="shot-cap">
+            <b>Damage Photo #{{ loop.index }}</b>
+            <a href="{{ url_for('admin.damage_photo_file', photo_id=dp.id, download=1) }}">Download</a>
+          </figcaption>
+          {% if dp.analysis_status in ('CONFIRMED', 'COMPLETE') and dp.damage_type and dp.damage_type !=
+          'Other/uncertain' %}
+          <div class="ai-line ok">
+            <span class="ai-dot"></span>Detected: <b>{{ dp.damage_type }}</b>{% if dp.confidence %} · {{
+            '%.0f'|format(dp.confidence * 100) }}% confidence{% endif %}
+          </div>
+          {% elif dp.analysis_status == 'UNAVAILABLE' %}
+          <div class="ai-line warn">
+            <span class="ai-dot"></span>
+          </div>
+          {% else %}
+          <div class="ai-line warn">
+            <span class="ai-dot"></span>Type: {{ dp.damage_type or 'Other/uncertain' }} · Manual review required
+          </div>
+          {% endif %}
+        </figure>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% include "admin/_damage_analysis.html" %}
+  </div>
+
+  <div class="side-stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Update status</h2>
+      </div>
+      <form class="panel-body status-form" method="post"
+        action="{{ url_for('admin.update_status', claim_id=claim.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==claim.status }}>{{ {'Pending Review': '🟡',
+            'Under Review': '🔵', 'Approved': '🟢', 'Rejected': '🔴'}[s] }} {{ s }}</option>{% endfor %}
+        </select>
+        <label for="remarks">Rejection remarks (optional)</label>
+        <textarea
+            id="remarks"
+            name="remarks"
+            rows="4"
+            maxlength="1000"
+            placeholder="Enter the reason for rejecting this claim..."
+        >{{ claim.review_remarks or '' }}</textarea>
+
+        <div id="remarks-hint" style="font-size:12px; color:var(--muted);">
+              Remarks are saved only when the claim is rejected.
+        </div>
+        <button class="btn btn-gold" type="submit">Update status</button>
+        <div class="reviewed-by">
+          {% if claim.reviewed_by %}Last updated by {{ claim.reviewed_by }} on {{ claim.updated_at|dt }}{% else %}Not
+          reviewed yet{% endif %}
+        </div>
+      </form>
+              </div>
+      </form>
+
+      <!-- Paste the script here -->
+      <script>
+      document.addEventListener('DOMContentLoaded', function () {
+          const status = document.getElementById('status');
+          const remarks = document.getElementById('remarks');
+          const hint = document.getElementById('remarks-hint');
+          const label = document.querySelector('label[for="remarks"]');
+
+          function toggleRemarks() {
+              const show = status.value === 'Rejected';
+              remarks.style.display = show ? 'block' : 'none';
+              label.style.display = show ? 'block' : 'none';
+              hint.style.display = show ? 'block' : 'none';
+          }
+
+          status.addEventListener('change', toggleRemarks);
+          toggleRemarks();
+      });
+      </script>
+
+    </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Claim details</h2>
+      </div>
+      <div class="panel-body info">
+        <dl>
+          <div class="row">
+            <dt>Claim reference</dt>
+            <dd>{{ claim.claim_reference }}</dd>
+          </div>
+          <div class="row">
+            <dt>Policy number</dt>
+            <dd>{{ claim.policy_number }}</dd>
+          </div>
+          <div class="row">
+            <dt>Customer name</dt>
+            <dd>{{ claim.customer_name }}</dd>
+          </div>
+          <div class="row">
+            <dt>Phone</dt>
+            <dd>{{ claim.customer_phone }}</dd>
+          </div>
+          <div class="row">
+            <dt>Vehicle number</dt>
+            <dd>
+              {% if claim.vehicle_number %}
+              <span class="plate">{{ claim.vehicle_number }}</span>
+              <span class="cell-sub" style="margin-left:0.5rem">Read from photo</span>
+              {% else %}
+              <span class="muted-val">Manual review required - see vehicle photo</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div class="row">
+            <dt>Vehicle</dt>
+            <dd>{{ claim.vehicle_make }} {{ claim.vehicle_model }}</dd>
+          </div>
+          <div class="row">
+            <dt>Chassis number</dt>
+            <dd>
+              {% if claim.chassis_number %}<span class="chassis-no">{{ claim.chassis_number }}</span>{% else %}<span
+                class="muted-val">Manual review required</span>{% endif %}
+              <div
+                class="ocr-chip {{ 'ok' if claim.chassis_number and claim.chassis_ocr_status in ('VERIFIED', 'MANUALLY_VERIFIED') else 'warn' }}">
+                {% if not claim.chassis_number or claim.chassis_ocr_status in ('MANUAL_REVIEW', 'NOT_DETECTED') %}Manual
+                review required{% else %}{{ claim.chassis_ocr_status|chassis_status }}{% endif %}
+              </div>
+            </dd>
+          </div>
+          <div class="row">
+            <dt>Policy cover</dt>
+            <dd>{{ fmt(claim.policy_start_date) }} – {{ fmt(claim.policy_end_date) }}</dd>
+          </div>
+          <div class="row">
+            <dt>Submitted time</dt>
+            <dd>{{ claim.submitted_at|dt }}</dd>
+          </div>
+          <div class="row">
+            <dt>Status</dt>
+            <dd><span class="badge {{ claim.status|status_class }}">{{ claim.status }}</span></dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <div class="lb-top">
+    <b id="lb-title"></b><span id="lb-count"></span>
+    <a class="lb-btn" id="lb-download" href="#" style="margin-left:auto">Download</a>
+    <button class="lb-btn" type="button" id="lb-close" aria-label="Close">✕</button>
+  </div>
+  <div class="lb-stage">
+    <button class="lb-btn lb-nav" type="button" id="lb-prev" aria-label="Previous photo">‹</button>
+    <div class="lb-img-wrap"><img id="lb-img" alt=""></div>
+    <button class="lb-btn lb-nav" type="button" id="lb-next" aria-label="Next photo">›</button>
+  </div>
+  <div class="lb-foot">Click the photo to zoom · ← → to move · Esc to close</div>
+</div>
+<script>
+  window.GALLERY = [
+    {% for f in gallery %}{ src: "{{ url_for('admin.claim_file', file_id=f.id) }}", dl: "{{ url_for('admin.claim_file', file_id=f.id, download=1) }}", title: { { f.title | tojson } } } { { ',' if not loop.last or claim.damage_photos } }
+  {% endfor %}
+  {% for dp in claim.damage_photos %} { src: "{{ url_for('admin.damage_photo_file', photo_id=dp.id) }}", dl: "{{ url_for('admin.damage_photo_file', photo_id=dp.id, download=1) }}", title: "Damage Photo #{{ loop.index }} ({{ dp.damage_type }})" } { { ',' if not loop.last } }
+  {% endfor %}
+  ];
+</script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/damage.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+{% from "customer/_macros.html" import logo_mark %}
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dashboard{% endblock %} | Car Insure Insurance Portal</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+{% set ep = request.endpoint %}
+<div class="shell">
+  <aside class="sidebar">
+    <a class="side-brand" href="{{ url_for('admin.dashboard') }}">
+      {{ logo_mark('') }}
+      <span><b>CAR INSURE</b><small>Insurance portal</small></span>
+    </a>
+    <nav class="nav">
+      <span class="nav-label">CLAIMS</span>
+      <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep == 'admin.dashboard' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard</a>
+      <a href="{{ url_for('admin.claims') }}" class="{{ 'active' if ep in ('admin.claims', 'admin.claim_detail') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>
+        All claims</a>
+      <a href="{{ url_for('admin.pending') }}" class="{{ 'active' if ep == 'admin.pending' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        Pending
+        {% if nav_pending %}<span class="count">{{ nav_pending }}</span>{% endif %}</a>
+      <a href="{{ url_for('admin.approved') }}" class="{{ 'active' if ep == 'admin.approved' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/></svg>
+        Approved</a>
+      <a href="{{ url_for('admin.rejected') }}" class="{{ 'active' if ep == 'admin.rejected' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
+        Rejected</a>
+      <span class="nav-label">ACCOUNT</span>
+      <a href="{{ url_for('admin.settings') }}" class="{{ 'active' if ep == 'admin.settings' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+        Settings</a>
+      <form method="post" action="{{ url_for('admin.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Logout</button>
+      </form>
+    </nav>
+    <div class="side-foot">
+      <span class="avatar">{{ (session.admin_name or 'A')[:1] }}</span>
+      <span><b>{{ session.admin_name }}</b><small>@{{ session.admin_username }}</small></span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        {% block crumbs %}{% endblock %}
+        <h1>{% block heading %}Claim dashboard{% endblock %}</h1>
+      </div>
+      <form class="top-search" method="get" action="{{ url_for('admin.claims') }}" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" name="q" placeholder="Search claim, policy, name or vehicle" value="{{ q or '' }}" aria-label="Search claims">
+      </form>
+      <span class="today" id="today"></span>
+    </header>
+    <div class="page">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}<div class="flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+<script>
+  document.getElementById('today').textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

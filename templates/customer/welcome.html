@@ -1,0 +1,108 @@
+{% extends "customer/base.html" %}
+{% from "customer/_macros.html" import topnav, icon_alert, icon_lock, icon_shield, icon_car, icon_bolt %}
+{% block title %}Start a claim{% endblock %}
+{% block body %}
+<section class="hero" style="{{ hero_style('hero') }}">
+  {{ topnav() }}
+  <div class="hero-main">
+    <div class="wrap hero-inner">
+      <div class="accent-bar"></div>
+      <h1><span>Protect your</span><span class="gold">journey</span></h1>
+      <p class="hero-lead">Your vehicle. Your journey. Our protection.</p>
+      <div class="hero-actions">
+        <a class="btn btn-gold" href="#start">Start claim <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main>
+  <div class="wrap narrow">
+    <section class="card overlap" id="start" aria-labelledby="start-title">
+      <h2 id="start-title">Start your claim</h2>
+      <p class="lead">Enter your policy number. We’ll fetch your details for you.</p>
+
+      {% if error %}
+      <div class="alert alert-error shake" role="alert" id="policy-error">
+        {{ icon_alert() }}
+        <div><strong>{{ error.title }}</strong><p>{{ error.text }}</p></div>
+      </div>
+      {% endif %}
+
+      <form id="policy-form" method="post" action="{{ url_for('customer.verify') }}#start" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="policy_number">Policy number</label>
+          <div class="input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+            <input class="input {{ 'invalid' if error }}" id="policy_number" name="policy_number"
+                   value="{{ policy_number }}" placeholder="POL10001" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false" maxlength="20"
+                   enterkeyhint="go" required aria-describedby="policy-hint">
+          </div>
+          <div class="hint" id="policy-hint">Printed at the top of your policy document.</div>
+        </div>
+        <button class="btn btn-gold btn-block mt" type="submit" id="continue-btn">
+          <span class="spinner" aria-hidden="true"></span>
+          Continue <span class="arrow" aria-hidden="true">→</span>
+        </button>
+      </form>
+      <div class="secure-note">{{ icon_lock() }} Your information is securely protected</div>
+    </section>
+  </div>
+
+  <section class="strip" aria-label="Why claim with Car Insure">
+    <div class="wrap">
+      <div class="feature">
+        <div class="feature-icon">{{ icon_shield() }}</div>
+        <div><h3>Secure</h3><p>Your details stay protected end to end.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">{{ icon_car() }}</div>
+        <div><h3>Simple</h3><p>Just your policy number and your phone camera.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">{{ icon_bolt() }}</div>
+        <div><h3>Fast</h3><p>Submit in minutes and get a reference instantly.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dark-section" aria-labelledby="how-title">
+    <div class="wrap">
+      <div class="accent-bar"></div>
+      <h2 class="section-title" id="how-title">How it works</h2>
+      <p class="section-lead">Four steps from the roadside to a claim reference.</p>
+      <ol class="steps">
+        <li><span class="step-num">01</span><div><h3>Verify policy</h3><p>Enter your policy number.</p></div></li>
+        <li><span class="step-num">02</span><div><h3>Capture vehicle</h3><p>Five photos and a short video.</p></div></li>
+        <li><span class="step-num">03</span><div><h3>Submit claim</h3><p>Get your claim reference.</p></div></li>
+        <li><span class="step-num">04</span><div><h3>We review</h3><p>Our team assesses and contacts you.</p></div></li>
+      </ol>
+    </div>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    var form = document.getElementById('policy-form');
+    var input = document.getElementById('policy_number');
+    var btn = document.getElementById('continue-btn');
+    if (document.getElementById('policy-error')) {
+      document.getElementById('start').scrollIntoView({ block: 'start' });
+    }
+    input.addEventListener('input', function () {
+      var pos = input.selectionStart;
+      input.value = input.value.toUpperCase().replace(/\s+/g, '');
+      try { input.setSelectionRange(pos, pos); } catch (e) {}
+      input.classList.remove('invalid');
+    });
+    form.addEventListener('submit', function (e) {
+      if (!input.value.trim()) { e.preventDefault(); input.classList.add('invalid'); input.focus(); return; }
+      btn.classList.add('loading'); btn.disabled = true;
+    });
+    window.addEventListener('pageshow', function () { btn.classList.remove('loading'); btn.disabled = false; });
+  })();
+</script>
+{% endblock %}

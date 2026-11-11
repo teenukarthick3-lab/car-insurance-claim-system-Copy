@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0B0F14">
+  <title>{% block title %}Car Insure{% endblock %} | Car Insure</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/customer.css') }}">
+</head>
+<body>
+{% block body %}{% endblock %}
+{% block footer %}
+<footer class="footer">
+  <div class="wrap">
+    <span class="tag">CAR INSURE · Simple. Secure. Built around you.</span>
+    <span>Claims support 1800-123-4567 · © {{ now_year }} Car Insure</span>
+  </div>
+</footer>
+{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

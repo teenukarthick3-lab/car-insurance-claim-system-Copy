@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% block title %}Settings{% endblock %}
+{% block heading %}Settings{% endblock %}
+{% block content %}
+<div class="settings-grid">
+  <div style="display:grid;gap:22px">
+    <section class="panel">
+      <div class="panel-head"><h2>Change password</h2></div>
+      <form class="panel-body" method="post" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="fld"><label for="current">Current password</label><input id="current" name="current" type="password" required autocomplete="current-password"></div>
+        <div class="fld"><label for="new">New password</label><input id="new" name="new" type="password" minlength="8" required autocomplete="new-password"></div>
+        <div class="fld"><label for="confirm">Confirm new password</label><input id="confirm" name="confirm" type="password" minlength="8" required autocomplete="new-password"></div>
+        <button class="btn btn-gold" type="submit">Change password</button>
+      </form>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>AI photo check</h2></div>
+      <div class="panel-body">
+        <div class="ai-status-box {{ '' if (ai.ready or not ai.active) else 'bad' }}">{{ ai.summary }}</div>
+        {% if ai.last_error %}<div class="ai-status-box bad" style="margin-top:10px">{{ ai.last_error }}</div>{% endif %}
+        <div class="cell-sub" style="margin-top:10px">Mode, model and confidence threshold are set in <b>config.py</b> or the <b>.env</b> file.</div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Customer claim link</h2></div>
+      <div class="panel-body">
+        <div class="cell-sub">Share this with customers on the same Wi-Fi:</div>
+        <div class="url-box">{% if lan_ip %}http://{{ lan_ip }}:{{ port }}/claim{% else %}No Wi-Fi/LAN address detected{% endif %}</div>
+        <div class="cell-sub" style="margin-top:12px">On this laptop only:</div>
+        <div class="url-box">http://127.0.0.1:{{ port }}/claim</div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Policy records</h2><span class="meta">{{ policies|length }} policies · read-only demo data</span></div>
+    <table>
+      <thead><tr><th>Policy</th><th>Customer</th><th>Vehicle</th><th>Cover</th><th>Can claim</th></tr></thead>
+      <tbody>
+      {% for p in policies %}
+        <tr>
+          <td class="strong">{{ p.policy_number }}</td>
+          <td>{{ p.customer_name }}<div class="cell-sub">{{ p.customer_phone }}</div></td>
+          <td><span class="plate">{{ p.vehicle_number }}</span><div class="cell-sub">{{ p.vehicle_make }} {{ p.vehicle_model }}</div></td>
+          <td>{{ fmt(p.policy_start_date) }} – {{ fmt(p.policy_end_date) }}</td>
+          <td>{% if p.eligible %}<span class="badge approved">Yes</span>{% else %}<span class="badge rejected" title="{{ p.eligibility }}">{{ 'Expired' if 'expired' in p.eligibility else p.policy_status }}</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+{% from "customer/_macros.html" import logo_mark %}
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in | Car Insure Insurance Portal</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+<main class="login-page" style="{{ hero_style('login') }}">
+  <div class="login-brand">
+    {{ logo_mark('') }}
+    <span><b>CAR INSURE</b><small>Protect your journey</small></span>
+  </div>
+
+  <div class="login-stack">
+    <h1>Insurance portal</h1>
+    <p class="sub">Claims team sign in</p>
+    <form class="login-card" method="post" autocomplete="on">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+      {% endwith %}
+      {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="fld">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" required autofocus value="{{ request.form.username or '' }}">
+      </div>
+      <div class="fld">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-gold" type="submit">Secure login →</button>
+      <div class="lock-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+        Authorized personnel only
+      </div>
+    </form>
+    <p class="login-foot">Simple. Secure. Built around you.</p>
+  </div>
+</main>
+</body>
+</html>
